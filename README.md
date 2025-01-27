@@ -12,10 +12,3 @@ Aura é um projeto de um aplicativo desenvolvido para ajudar os usuários a prio
 ## Tecnologias Utilizadas
 ### [Flutter](https://flutter.dev): Framework utilizado para a construção do aplicativo mobile.
 ### [Firebase](https://firebase.google.com/?hl=pt-br): Autenticação de usuários e armazenamento de dados no Firestore.
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
