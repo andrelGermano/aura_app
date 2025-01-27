@@ -10,10 +10,8 @@ Um projeto de um app aplicativo desenvolvido para ajudar os usuários a prioriza
 
 
 ## Tecnologias Utilizadas
-### Flutter: Framework utilizado para a construção do aplicativo mobile.
-### Firebase: Autenticação de usuários e armazenamento de dados no Firestore.
-### Provider: Gerenciamento de estado para manter a integridade dos dados durante a navegação.
-### Push Notifications: Para envio de lembretes diários e motivacionais.
+### [Flutter](https://flutter.dev): Framework utilizado para a construção do aplicativo mobile.
+### [Firebase](https://firebase.google.com/?hl=pt-br): Autenticação de usuários e armazenamento de dados no Firestore.
 
 
 This project is a starting point for a Flutter application.
