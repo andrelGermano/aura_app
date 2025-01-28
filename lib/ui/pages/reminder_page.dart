@@ -6,7 +6,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:permission_handler/permission_handler.dart';
 
-import '../../services/notification_service.dart';
+import '../../services/reminder_service.dart';
 
 class CustomReminderPage extends StatefulWidget {
   const CustomReminderPage({super.key});
@@ -22,13 +22,12 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
   bool _vibrationEnabled = false;
 
   late FlutterLocalNotificationsPlugin _notificationsPlugin;
-  late final NotificationService _notificationService;
-
+  late final ReminderService _notificationService;
 
   @override
   void initState() {
     super.initState();
-    _notificationService = NotificationService();
+    _notificationService = ReminderService();
     _initializeNotifications();
     _requestNotificationPermissions();
 
@@ -95,9 +94,9 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
     print("Agendando notificação para: $tzDateTime");
 
     await _notificationsPlugin.zonedSchedule(
-      0, // Use um ID único para evitar sobreposição
+      1, // Use um ID único para evitar sobreposição
       'Lembrete: $title',
-      'Está na hora do lembrete!',
+      'Não esqueça!',
       tzDateTime,
       const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -123,11 +122,18 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
     }
 
     try {
+      // Adiciona o lembrete no Firestore
       await _notificationService.addReminder(
         name: _reminderNameController.text,
         time: _selectedTime!.format(context),
         repeatDaily: _repeatDaily,
         vibration: _vibrationEnabled,
+      );
+
+      // Agenda a notificação
+      await _scheduleNotification(
+        _reminderNameController.text,
+        _selectedTime!,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -227,6 +233,8 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
                           icon: const Icon(Icons.delete),
                           onPressed: () async {
                             await _notificationService.deleteReminder(reminders[index].id);
+                            // Cancelar a notificação agendada
+                            await _notificationsPlugin.cancel(1);
                           },
                         ),
                       );

@@ -4,18 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
   @override
   _SettingsPageState createState() => _SettingsPageState();
+
+  // Método público para cancelar notificações
+  static void cancelNotifications(BuildContext context) {
+    final _SettingsPageState state = context.findAncestorStateOfType<_SettingsPageState>()!;
+    state._cancelNotificationsPrivate();
+  }
 }
 
 class _SettingsPageState extends State<SettingsPage> {
   bool isMotivationalModeEnabled = false;
-  int selectedHours = 0; // Hora padrão
-  int selectedMinutes = 0; // Minutos padrão
+
+  int selectedHours = 0;
+  int selectedMinutes = 0;
+
   late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
   late List<MotivationalPhrases> motivationalPhrases;
 
@@ -28,8 +38,14 @@ class _SettingsPageState extends State<SettingsPage> {
     tz_data.initializeTimeZones();
     _initializeNotifications();
     motivationalPhrases = getPhrases(); // Carregar as frases no initState
-    hoursController.text = selectedHours.toString(); // Inicializa com o valor padrão de horas
-    minutesController.text = selectedMinutes.toString(); // Inicializa com o valor padrão de minutos
+    hoursController.text = selectedHours.toString();
+    minutesController.text = selectedMinutes.toString();
+    _loadMotivationalModeSettings(); // Novo método para carregar do Firestore
+  }
+
+  // Método privado para cancelar as notificações
+  void _cancelNotificationsPrivate() async {
+    await flutterLocalNotificationsPlugin.cancel(0);
   }
 
   void _initializeNotifications() async {
@@ -41,11 +57,12 @@ class _SettingsPageState extends State<SettingsPage> {
       android: initializationSettingsAndroid,
     );
 
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+    );
 
-    // Criação do canal de notificações para Android
     const androidNotificationChannel = AndroidNotificationChannel(
-      'motivational_channel', // ID do canal
+      'motivational_channel',
       'Motivational Notifications',
       description: 'Envia frases motivacionais regularmente',
       importance: Importance.high,
@@ -55,13 +72,12 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidNotificationChannel);
   }
 
-  void _scheduleMotivationalNotifications() {
-    flutterLocalNotificationsPlugin.cancelAll();
+  void _scheduleMotivationalNotifications() async {
+
     if (!isMotivationalModeEnabled) return;
 
     final random = Random();
@@ -77,48 +93,117 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     final localTimeZone = tz.getLocation('America/Sao_Paulo'); // Ajuste para sua timezone
-
-    final totalMinutes = selectedHours * 60 + selectedMinutes; // Calcula o total de minutos
-    print("\n\n\n\n\n\n\nNotificação agendada com frequência de $selectedHours horas e $selectedMinutes minutos.\n\n\n\n\n\n\n");
+    final totalMinutes = selectedHours * 60 + selectedMinutes;
 
     // Pega o horário atual no fuso correto de São Paulo
-    final now = tz.TZDateTime.now(localTimeZone);
+    var now = tz.TZDateTime.now(localTimeZone);
 
-    // Agendar a primeira notificação
-    final firstScheduledTime = now.add(Duration(minutes: totalMinutes));
+    // Verifica se o intervalo é válido
+    if (totalMinutes <= 0) {
+      print('Intervalo inválido. Defina um horário maior que 0.');
+      return;
+    }
+
+    // Calcula o próximo horário para agendamento
+    var nextScheduledTime = now.add(Duration(minutes: totalMinutes));
+
+    // Verifica se o horário está no passado e ajusta, se necessário
+    while (nextScheduledTime.isBefore(now)) {
+      nextScheduledTime = nextScheduledTime.add(Duration(minutes: totalMinutes));
+    }
 
     final phrase = motivationalPhrases[random.nextInt(motivationalPhrases.length)].phrase;
 
-    flutterLocalNotificationsPlugin.zonedSchedule(
-      0,
-      'Motivação do Dia',
-      phrase,
-      firstScheduledTime,
-      NotificationDetails(android: androidDetails),
-      uiLocalNotificationDateInterpretation:
-      UILocalNotificationDateInterpretation.wallClockTime,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    );
+    if(isMotivationalModeEnabled){
+      // Agenda a notificação
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        0,
+        'Motivação do Dia',
+        phrase,
+        nextScheduledTime,
+        NotificationDetails(android: androidDetails),
+        uiLocalNotificationDateInterpretation:
+        UILocalNotificationDateInterpretation.wallClockTime,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    }
 
-    print("\n\n\n\n\n\n\nNotificação programada para $firstScheduledTime com a frase: \"$phrase\"\n\n\n\n\n\n\n");
+    print("\nNotificação programada para $nextScheduledTime com a frase: \"$phrase\"");
 
-    // Agendar a próxima notificação no mesmo intervalo
-    final nextScheduledTime = firstScheduledTime.add(Duration(minutes: totalMinutes));
-    flutterLocalNotificationsPlugin.zonedSchedule(
-      1,  // ID diferente para a próxima notificação
-      'Motivação do Dia',
-      motivationalPhrases[random.nextInt(motivationalPhrases.length)].phrase,
-      nextScheduledTime,
-      NotificationDetails(android: androidDetails),
-      uiLocalNotificationDateInterpretation:
-      UILocalNotificationDateInterpretation.wallClockTime,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    );
-    print("\n\n\n\n\n\n\nPróxima notificação programada para $nextScheduledTime.\n\n\n\n\n\n\n");
+    // Reagendar a próxima notificação automaticamente
+    Future.delayed(Duration(minutes: totalMinutes), () {
+      if (isMotivationalModeEnabled) {
+        _scheduleMotivationalNotifications();
+      }
+    });
+  }
+
+  Future<void> _updateMotivationalModeSettings() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception("Usuário não autenticado!");
+      }
+
+      final motivationalSettings = {
+        'isEnabled': isMotivationalModeEnabled,
+        'hours': selectedHours,
+        'minutes': selectedMinutes,
+        'updatedAt': Timestamp.now(),
+      };
+
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('motivationalMode')
+          .doc('settings') // Documento único para as configurações
+          .set(motivationalSettings);
+    } catch (e) {
+      print("Erro ao salvar configurações: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erro ao salvar configurações: $e")),
+      );
+    }
+  }
+
+  void _loadMotivationalModeSettings() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception("Usuário não autenticado!");
+      }
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('motivationalMode')
+          .doc('settings')
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          isMotivationalModeEnabled = data['isEnabled'] ?? false;
+          selectedHours = data['hours'] ?? 0;
+          selectedMinutes = data['minutes'] ?? 0;
+          hoursController.text = selectedHours.toString();
+          minutesController.text = selectedMinutes.toString();
+        });
+      }
+    } catch (e) {
+      print("Erro ao carregar configurações: $e");
+    }
+  }
+
+  bool _isValidTime() {
+    // Verifica se os valores de horas e minutos são diferentes de 0
+    return selectedHours > 0 || selectedMinutes > 0;
   }
 
   @override
   Widget build(BuildContext context) {
+    bool isSaveButtonEnabled = _isValidTime();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Configurações"),
@@ -137,10 +222,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 Switch(
                   value: isMotivationalModeEnabled,
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     setState(() {
                       isMotivationalModeEnabled = value;
                     });
+
+                    // Salvar no Firestore
+                    await _updateMotivationalModeSettings();
 
                     // Exibir SnackBar para mostrar que o modo foi alterado
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -152,6 +240,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                     );
+
+                    // Agendar ou cancelar notificações com base no estado
+                    if (isMotivationalModeEnabled) {
+                      _scheduleMotivationalNotifications();
+                    } else {
+                      // Cancelar todas as notificações agendadas
+                      await flutterLocalNotificationsPlugin.cancelAll();
+                    }
                   },
                 ),
               ],
@@ -161,12 +257,11 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 const SizedBox(height: 20),
                 const Text(
-                  "Frequência das mensagens:",
+                  "Frequência das mensagens:\n",
                   style: TextStyle(fontSize: 16),
                 ),
                 Row(
                   children: [
-                    // Campo para horas
                     Expanded(
                       child: TextField(
                         controller: hoursController,
@@ -176,18 +271,20 @@ class _SettingsPageState extends State<SettingsPage> {
                           border: OutlineInputBorder(),
                         ),
                         onChanged: (value) {
-                          if (value.isNotEmpty) {
+                          // Verificar se o valor é um número inteiro
+                          if (value.isNotEmpty && RegExp(r'^[0-9]+$').hasMatch(value)) {
                             setState(() {
-                              selectedHours = int.tryParse(value) ?? 0;
-                              print("\n\n\n\n\n\n\nHora alterada para: $selectedHours\n\n\n\n\n\n\n");
+                              selectedHours = int.parse(value);
                             });
+                          } else {
+                            // Limpar a entrada caso não seja número inteiro
+                            hoursController.clear();
                           }
                         },
-                        enabled: isMotivationalModeEnabled, // Desabilita o campo
+                        enabled: isMotivationalModeEnabled,
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // Campo para minutos
                     Expanded(
                       child: TextField(
                         controller: minutesController,
@@ -197,14 +294,17 @@ class _SettingsPageState extends State<SettingsPage> {
                           border: OutlineInputBorder(),
                         ),
                         onChanged: (value) {
-                          if (value.isNotEmpty) {
+                          // Verificar se o valor é um número inteiro
+                          if (value.isNotEmpty && RegExp(r'^[0-9]+$').hasMatch(value)) {
                             setState(() {
-                              selectedMinutes = int.tryParse(value) ?? 0;
-                              print("\n\n\n\n\n\n\nMinutos alterados para: $selectedMinutes\n\n\n\n\n\n\n");
+                              selectedMinutes = int.parse(value);
                             });
+                          } else {
+                            // Limpar a entrada caso não seja número inteiro
+                            minutesController.clear();
                           }
                         },
-                        enabled: isMotivationalModeEnabled, // Desabilita o campo
+                        enabled: isMotivationalModeEnabled,
                       ),
                     ),
                   ],
@@ -213,10 +313,19 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                print("Modo Motivacional: $isMotivationalModeEnabled"); // Verificar o valor
-                _scheduleMotivationalNotifications();
-              },
+              onPressed: isSaveButtonEnabled
+                  ? () async {
+                await _updateMotivationalModeSettings();
+
+                if (isMotivationalModeEnabled) {
+                  _scheduleMotivationalNotifications();
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Configurações salvas com sucesso!")),
+                );
+              }
+                  : null, // Desabilita o botão se as condições não forem atendidas
               child: const Text("Salvar Frequência"),
             ),
           ],

@@ -21,19 +21,8 @@ class ActivityCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, // Centralizando verticalmente
-          crossAxisAlignment: CrossAxisAlignment.center, // Centralizando horizontalmente
           children: [
-            // Garantindo que a imagem ocupe todo o espaço disponível horizontalmente e seja centralizada
-            Container(
-              alignment: Alignment.center,
-              child: Image.asset(
-                image,
-                height: 100,
-                fit: BoxFit.contain, // Ajusta a imagem proporcionalmente
-              ),
-            ),
-            SizedBox(height: 8),
+            Image.asset(image, height: 100),
             Text(
               name,
               style: Theme.of(context).textTheme.titleLarge,

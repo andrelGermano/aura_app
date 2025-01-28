@@ -1,11 +1,12 @@
 import 'dart:math';
+import 'package:aura_novo/ui/pages/history_page.dart';
 import 'package:aura_novo/ui/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aura_novo/services/auth_service.dart';
-import 'package:aura_novo/ui/pages/custom_reminder_page.dart';
-import 'package:aura_novo/ui/pages/other_page.dart';
+import 'package:aura_novo/ui/pages/reminder_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../data/activities.dart';
 import '../widgets/custom_bottom_navigation_bar.dart';
@@ -20,6 +21,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   late List<Activity> activities;
 
@@ -137,7 +139,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           CustomReminderPage(),
-          OtherPage(),
+          HistoryPage(),
           SettingsPage(),
         ],
       ),
@@ -159,10 +161,36 @@ class _HomePageState extends State<HomePage> {
             ListTile(
               title: Text("Sair"),
               onTap: () {
-                authService.signOut();
-                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text("Tem certeza?"),
+                      content: Text("Você tem certeza que deseja sair?"),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(); // Fecha o dialog
+                          },
+                          child: Text("Cancelar"),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            authService.signOut();
+                            Navigator.pop(context); // Fecha o menu
+                            Navigator.pop(context); // Fecha a tela atual
+                            _notificationsPlugin.cancelAll();
+                            SettingsPage.cancelNotifications(context);
+                          },
+                          child: Text("Confirmar"),
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
             ),
+
           ],
         ),
       ),

@@ -1,6 +1,6 @@
 import 'package:aura_novo/theme/theme.dart';
 import 'package:aura_novo/theme/util.dart';
-import 'package:aura_novo/ui/pages/custom_reminder_page.dart';
+import 'package:aura_novo/ui/pages/reminder_page.dart';
 import 'package:aura_novo/ui/widgets/auth_checker.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -9,15 +9,11 @@ import 'core/di/configure_providers.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async{
-
   WidgetsFlutterBinding.ensureInitialized();
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
   final data = await ConfigureProviders.createDependencyTree();
-
   runApp(AppRoot(data: data));
 }
 
