@@ -10,11 +10,11 @@ class ConfigureProviders {
 
   static Future<ConfigureProviders> createDependencyTree() async {
     final authService = AuthService();
-    final historyService = HistoryService(); // Instância do HistoryService
+    final historyService = HistoryService();
 
     return ConfigureProviders(providers: [
       Provider<AuthService>.value(value: authService),
-      Provider<HistoryService>.value(value: historyService), // Adiciona o HistoryService
+      Provider<HistoryService>.value(value: historyService),
     ]);
   }
 }

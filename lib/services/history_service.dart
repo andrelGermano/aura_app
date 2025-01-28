@@ -63,7 +63,6 @@ class HistoryService {
         });
       }
 
-      // Converte o mapa para uma lista de mapas
       return groupedData.entries.map((entry) {
         return {
           'date': entry.key,

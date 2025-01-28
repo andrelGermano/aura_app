@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../services/reminder_service.dart';
 
+// Tela para criar lembretes personalizados
 class CustomReminderPage extends StatefulWidget {
   const CustomReminderPage({super.key});
 
@@ -16,50 +17,55 @@ class CustomReminderPage extends StatefulWidget {
 }
 
 class _CustomReminderPageState extends State<CustomReminderPage> {
+  // Controlador para o nome do lembrete
   final TextEditingController _reminderNameController = TextEditingController();
-  TimeOfDay? _selectedTime;
-  bool _repeatDaily = false;
-  bool _vibrationEnabled = false;
 
-  late FlutterLocalNotificationsPlugin _notificationsPlugin;
-  late final ReminderService _notificationService;
+  TimeOfDay? _selectedTime; // Armazena o horário selecionado
+  bool _repeatDaily = false; // Define se o lembrete será diário
+  bool _vibrationEnabled = false; // Define se a vibração está habilitada
+
+  late FlutterLocalNotificationsPlugin _notificationsPlugin; // Gerencia notificações locais
+  late final ReminderService _notificationService; // Serviço para gerenciar lembretes no Firestore
 
   @override
   void initState() {
     super.initState();
     _notificationService = ReminderService();
-    _initializeNotifications();
-    _requestNotificationPermissions();
+    _initializeNotifications(); // Inicializa notificações
+    _requestNotificationPermissions(); // Solicita permissões
 
-    // Garante que a coleção reminders exista para o usuário
+    // Garante que a coleção `reminders` existe para o usuário atual
     _notificationService.initializeRemindersCollection();
   }
 
+  // Configuração inicial do sistema de notificações
   void _initializeNotifications() {
-    tz_data.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('America/Sao_Paulo')); // Ajuste o fuso horário
+    tz_data.initializeTimeZones(); // Inicializa os fusos horários
+    tz.setLocalLocation(tz.getLocation('America/Sao_Paulo')); // Define o fuso horário local
 
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher'); // Configuração Android
     const settings = InitializationSettings(android: android);
 
     _notificationsPlugin = FlutterLocalNotificationsPlugin();
     _notificationsPlugin.initialize(settings);
 
-    // Criação do canal de notificações
+    // Criação do canal de notificações para o Android
     const androidNotificationChannel = AndroidNotificationChannel(
       'lembrete_channel', // ID do canal
       'Lembretes', // Nome do canal
       description: 'Canal para notificações de lembretes',
-      importance: Importance.high,
+      importance: Importance.high, // Alta prioridade
     );
 
+    // Registra o canal de notificações
     _notificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidNotificationChannel);
   }
 
+  // Solicitação de permissões para notificações e alarmes
   Future<void> _requestNotificationPermissions() async {
-    // Permissão de notificação
+    // Permissão para notificações
     final notificationStatus = await Permission.notification.request();
     if (notificationStatus != PermissionStatus.granted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -68,7 +74,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
       return;
     }
 
-    // Permissão para alarmes exatos (Android 12+)
+    // Permissão para alarmes exatos (apenas Android 12+)
     if (await Permission.scheduleExactAlarm.isDenied) {
       final status = await Permission.scheduleExactAlarm.request();
       if (status != PermissionStatus.granted) {
@@ -80,6 +86,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
     }
   }
 
+  // Agendamento de uma notificação
   Future<void> _scheduleNotification(String title, TimeOfDay time) async {
     final scheduleTime = DateTime(
       DateTime.now().year,
@@ -94,25 +101,26 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
     print("Agendando notificação para: $tzDateTime");
 
     await _notificationsPlugin.zonedSchedule(
-      1, // Use um ID único para evitar sobreposição
-      'Lembrete: $title',
-      'Não esqueça!',
+      1, // ID único para evitar sobreposição de notificações
+      'Lembrete: $title', // Título da notificação
+      'Não esqueça!', // Corpo da notificação
       tzDateTime,
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'lembrete_channel', // ID do canal
-          'Lembretes',
+          'Lembretes', // Nome do canal
           channelDescription: 'Canal para notificações de lembretes',
           priority: Priority.high,
           importance: Importance.max,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exact,
+      androidScheduleMode: AndroidScheduleMode.exact, // Modo de agendamento exato
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time, // Útil para repetir diariamente
+      matchDateTimeComponents: DateTimeComponents.time, // Útil para repetições diárias
     );
   }
 
+  // Salvando o lembrete no Firestore e agendando a notificação
   Future<void> _saveReminder() async {
     if (_reminderNameController.text.isEmpty || _selectedTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -122,7 +130,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
     }
 
     try {
-      // Adiciona o lembrete no Firestore
+      // Adiciona o lembrete ao Firestore
       await _notificationService.addReminder(
         name: _reminderNameController.text,
         time: _selectedTime!.format(context),
@@ -144,6 +152,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
         ),
       );
 
+      // Reseta os campos após salvar o lembrete
       setState(() {
         _reminderNameController.clear();
         _selectedTime = null;
@@ -159,7 +168,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = FirebaseAuth.instance.currentUser; // Usuário autenticado
 
     return Scaffold(
       appBar: AppBar(
@@ -170,6 +179,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Campo para o nome do lembrete
             TextField(
               controller: _reminderNameController,
               decoration: const InputDecoration(
@@ -178,6 +188,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
               ),
             ),
             const SizedBox(height: 16),
+            // Escolha de horário
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -187,12 +198,13 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
                       : "Nenhuma hora selecionada",
                 ),
                 ElevatedButton(
-                  onPressed: _pickTime,
+                  onPressed: _pickTime, // Abre o seletor de horário
                   child: const Text("Escolher Hora"),
                 ),
               ],
             ),
             const SizedBox(height: 16),
+            // Alternativas para repetir diariamente e ativar vibração
             SwitchListTile(
               title: const Text("Repetir diariamente"),
               value: _repeatDaily,
@@ -212,6 +224,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
               },
             ),
             const SizedBox(height: 16),
+            // Lista de lembretes salvos
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: _notificationService.getRemindersStream(),
@@ -233,7 +246,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
                           icon: const Icon(Icons.delete),
                           onPressed: () async {
                             await _notificationService.deleteReminder(reminders[index].id);
-                            // Cancelar a notificação agendada
+                            // Cancela a notificação agendada
                             await _notificationsPlugin.cancel(1);
                           },
                         ),
@@ -243,6 +256,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
                 },
               ),
             ),
+            // Botão para salvar lembrete
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -256,6 +270,7 @@ class _CustomReminderPageState extends State<CustomReminderPage> {
     );
   }
 
+  // Função para selecionar horário
   Future<void> _pickTime() async {
     TimeOfDay? picked = await showTimePicker(
       context: context,

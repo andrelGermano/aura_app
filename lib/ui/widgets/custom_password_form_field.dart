@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+// Campo de senha personalizado com a opção de mostrar/ocultar a senha
 class CustomPasswordFormField extends StatefulWidget {
-  final String labelText;
-  final String? Function(String?)? validateFunction;
-  final TextEditingController? controller;
-  final TextInputType? keyboardType;
+  final String labelText; // Texto do rótulo
+  final String? Function(String?)? validateFunction; // Função de validação
+  final TextEditingController? controller; // Controlador do texto
+  final TextInputType? keyboardType; // Tipo de teclado a ser usado
 
   const CustomPasswordFormField({
     super.key,
@@ -20,31 +21,31 @@ class CustomPasswordFormField extends StatefulWidget {
 }
 
 class _CustomPasswordFormFieldState extends State<CustomPasswordFormField> {
-  late bool obscured = true;
+  late bool obscured = true; // Variável para controlar a visibilidade da senha
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = Theme.of(context); // Tema atual
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: TextFormField(
-        keyboardType: widget.keyboardType,
-        controller: widget.controller,
-        validator: widget.validateFunction,
-        obscureText: obscured,
+        keyboardType: widget.keyboardType, // Tipo de teclado
+        controller: widget.controller, // Controlador do campo
+        validator: widget.validateFunction, // Função de validação
+        obscureText: obscured, // Aplica a visibilidade da senha
         decoration: InputDecoration(
-          labelText: widget.labelText,
-          labelStyle: TextStyle(color: theme.colorScheme.primary),
+          labelText: widget.labelText, // Rótulo
+          labelStyle: TextStyle(color: theme.colorScheme.primary), // Estilo do rótulo
           suffixIcon: IconButton(
             onPressed: () {
               setState(() {
-                obscured = !obscured;
+                obscured = !obscured; // Alterna entre mostrar e ocultar a senha
               });
             },
             icon: Icon(
               obscured
                   ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
+                  : Icons.visibility_outlined, // Ícone de visibilidade
               color: theme.colorScheme.primary,
             ),
           ),
@@ -61,7 +62,7 @@ class _CustomPasswordFormFieldState extends State<CustomPasswordFormField> {
             borderRadius: BorderRadius.circular(12),
           ),
           fillColor: theme.colorScheme.surface,
-          filled: true,
+          filled: true, // Preenchimento do campo
         ),
       ),
     );

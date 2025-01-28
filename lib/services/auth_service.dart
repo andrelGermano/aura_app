@@ -23,7 +23,7 @@ class AuthService {
     try {
       UserCredential credential = await _firebaseAuth
           .createUserWithEmailAndPassword(email: email, password: password);
-      // Após o cadastro, podemos criar dados adicionais no Firestore
+      // Após o cadastro, pode criar dados adicionais no Firestore
       await _saveUserInfo(credential.user!);
       return credential;
     } on FirebaseAuthException catch (e) {

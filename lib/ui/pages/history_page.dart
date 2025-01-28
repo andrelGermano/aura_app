@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aura_novo/services/history_service.dart';
-import 'package:intl/intl.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({Key? key}) : super(key: key);
@@ -18,6 +17,7 @@ class _HistoryPageState extends State<HistoryPage> {
   String _searchQuery = '';
   DateTime? _selectedMonth;
 
+  /// Adiciona uma nova atividade ao histórico, garantindo validação básica.
   void _addActivity(HistoryService historyService) async {
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
@@ -26,7 +26,7 @@ class _HistoryPageState extends State<HistoryPage> {
       await historyService.addActivityToHistory(name: name, description: description);
       _nameController.clear();
       _descriptionController.clear();
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(); // Fecha o diálogo após a adição.
     }
   }
 
@@ -42,6 +42,7 @@ class _HistoryPageState extends State<HistoryPage> {
           IconButton(
             icon: const Icon(Icons.filter_alt),
             onPressed: () async {
+              // Permite ao usuário filtrar atividades por mês específico.
               final selectedMonth = await showMonthPicker(context: context, initialDate: DateTime.now());
               if (selectedMonth != null) {
                 setState(() {
@@ -65,7 +66,7 @@ class _HistoryPageState extends State<HistoryPage> {
               ),
               onChanged: (value) {
                 setState(() {
-                  _searchQuery = value.trim().toLowerCase();
+                  _searchQuery = value.trim().toLowerCase(); // Atualiza a busca em tempo real.
                 });
               },
             ),
@@ -84,7 +85,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
                 var groupedData = snapshot.data!;
 
-                // Filtra pelo mês selecionado
+                // Aplica filtro de mês, se necessário.
                 if (_selectedMonth != null) {
                   groupedData = groupedData.where((group) {
                     final dateParts = group['date']!.split('-');
@@ -93,12 +94,11 @@ class _HistoryPageState extends State<HistoryPage> {
                       int.parse(dateParts[1]), // Mês
                     );
 
-                    // Comparação correta com ano e mês
                     return date.year == _selectedMonth!.year && date.month == _selectedMonth!.month;
                   }).toList();
                 }
 
-                // Filtra pelo nome
+                // Refina os resultados com base na pesquisa.
                 if (_searchQuery.isNotEmpty) {
                   groupedData = groupedData.map((group) {
                     final filteredActivities = (group['activities'] as List<Map<String, dynamic>>)
@@ -113,6 +113,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   }).where((group) => (group['activities'] as List).isNotEmpty).toList();
                 }
 
+                // Mostra uma mensagem caso os filtros resultem em dados vazios.
                 if (groupedData.isEmpty) {
                   return const Center(child: Text("Nenhuma atividade encontrada."));
                 }
@@ -129,6 +130,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Mostra a data como título do grupo de atividades.
                           Text(
                             date,
                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
@@ -146,7 +148,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                 trailing: IconButton(
                                   icon: const Icon(Icons.delete, color: Colors.red),
                                   onPressed: () async {
-                                    await historyService.deleteActivity(activityId);
+                                    await historyService.deleteActivity(activityId); // Remove a atividade do histórico.
                                   },
                                 ),
                               ),
@@ -164,6 +166,7 @@ class _HistoryPageState extends State<HistoryPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          // Exibe um diálogo para adicionar novas atividades.
           showDialog(
             context: context,
             builder: (context) {
@@ -188,7 +191,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     child: const Text("Cancelar"),
                   ),
                   ElevatedButton(
-                    onPressed: () => _addActivity(historyService),
+                    onPressed: () => _addActivity(historyService), // Adiciona a nova atividade.
                     child: const Text("Adicionar"),
                   ),
                 ],
@@ -201,6 +204,7 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
+  /// Implementa uma interface básica de seleção de meses usando o seletor de data do Flutter.
   Future<DateTime?> showMonthPicker({required BuildContext context, required DateTime initialDate}) async {
     return showDatePicker(
       context: context,

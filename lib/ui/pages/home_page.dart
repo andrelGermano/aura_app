@@ -19,12 +19,18 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Controla o índice da página atual
   int _selectedIndex = 0;
+
+  // Chave global para controlar o Scaffold
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // Gerenciador de notificações locais
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
-  late List<Activity> activities;
+  late List<Activity> activities; // Lista de atividades carregadas do banco de dados
 
+  // Informações da atividade do dia
   String currentActivityName = '';
   String currentActivityDescription = '';
   String currentActivityImage = '';
@@ -32,31 +38,32 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    activities = getActivities(); // Carregando as atividades da lista
-    _loadDailyActivity();
+    activities = getActivities(); // Carrega a lista de atividades
+    _loadDailyActivity(); // Inicializa a atividade do dia
   }
 
-  // Função para carregar ou gerar a atividade do dia
+  // Carrega a atividade do dia, verificando a persistência em SharedPreferences
   Future<void> _loadDailyActivity() async {
     final prefs = await SharedPreferences.getInstance();
     final lastActivityDate = prefs.getString('lastActivityDate');
-    final currentDate = DateTime.now().toString().substring(0, 10);
+    final currentDate = DateTime.now().toString().substring(0, 10); // Data atual no formato yyyy-MM-dd
 
     if (lastActivityDate != currentDate) {
-      // Se a data for diferente, gera uma nova atividade
+      // Se a data mudou, gera uma nova atividade
       _changeActivity();
-      prefs.setString('lastActivityDate', currentDate);
+      prefs.setString('lastActivityDate', currentDate); // Atualiza a data em SharedPreferences
     } else {
-      // Se a data for igual, mantém a atividade do dia
+      // Recupera a atividade salva para o dia
       setState(() {
         currentActivityName = prefs.getString('currentActivityName') ?? 'Alongamento';
-        currentActivityDescription = prefs.getString('currentActivityDescription') ?? 'Alongue-se para melhorar sua flexibilidade e relaxar os músculos.';
+        currentActivityDescription = prefs.getString('currentActivityDescription') ??
+            'Alongue-se para melhorar sua flexibilidade e relaxar os músculos.';
         currentActivityImage = prefs.getString('currentActivityImage') ?? 'assets/images/stretching.png';
       });
     }
   }
 
-  // Função para alterar a atividade aleatoriamente
+  // Gera uma nova atividade aleatória e salva em SharedPreferences
   void _changeActivity() async {
     final random = Random();
     final activity = activities[random.nextInt(activities.length)];
@@ -67,13 +74,13 @@ class _HomePageState extends State<HomePage> {
       currentActivityImage = activity.image;
     });
 
-    // Salvar a atividade do dia no SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     prefs.setString('currentActivityName', currentActivityName);
     prefs.setString('currentActivityDescription', currentActivityDescription);
     prefs.setString('currentActivityImage', currentActivityImage);
   }
 
+  // Atualiza o índice da página selecionada
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -82,28 +89,31 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Obtém o serviço de autenticação
     final authService = Provider.of<AuthService>(context, listen: false);
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+      backgroundColor: Theme.of(context).colorScheme.primaryContainer, // Cor de fundo
       appBar: AppBar(
         title: Image.asset(
-          "assets/images/ic_launcher_foreground.png", // Logo
+          "assets/images/ic_launcher_foreground.png", // Mostra o logo no centro
           height: 75,
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: Icon(Icons.menu, size: 30),
+          icon: Icon(Icons.menu, size: 30), // Botão para abrir o menu lateral
           onPressed: () {
             _scaffoldKey.currentState?.openDrawer();
           },
         ),
       ),
       body: IndexedStack(
+        // Gerencia as páginas da navegação inferior
         index: _selectedIndex,
         children: [
           Center(
+            // Página inicial com sugestão do dia
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -113,45 +123,48 @@ class _HomePageState extends State<HomePage> {
                   Text(
                     "Olá! Aqui está a sugestão do dia:",
                     style: Theme.of(context).textTheme.titleLarge,
-                    textAlign: TextAlign.center, // Centralizando o texto
+                    textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 20),
-                  Image.asset(currentActivityImage, height: 200),
+                  Image.asset(currentActivityImage, height: 200), // Imagem da atividade
                   SizedBox(height: 20),
                   Text(
                     currentActivityName,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center, // Centralizando o nome da atividade
+                    textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 10),
                   Text(
                     currentActivityDescription,
                     style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center, // Centralizando a descrição
+                    textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: _changeActivity,
+                    onPressed: _changeActivity, // Botão para mudar a atividade
                     child: Text("Mudar Atividade"),
                   ),
                 ],
               ),
             ),
           ),
-          CustomReminderPage(),
-          HistoryPage(),
-          SettingsPage(),
+          CustomReminderPage(), // Página de lembretes
+          HistoryPage(), // Página de histórico
+          SettingsPage(), // Página de configurações
         ],
       ),
       bottomNavigationBar: CustomBottomNavigationBar(
+        // Barra de navegação inferior
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
       ),
       drawer: Drawer(
+        // Menu lateral
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
             UserAccountsDrawerHeader(
+              // Cabeçalho do menu lateral
               accountName: Text("Seja bem-vindo!"),
               accountEmail: Text(authService.getCurrentUserEmail() ?? "Email não disponível"),
               currentAccountPicture: CircleAvatar(
@@ -159,9 +172,10 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             ListTile(
-              title: Text("Sair"),
+              title: Text("Sair"), // Opção de sair
               onTap: () {
                 showDialog(
+                  // Confirmação antes de sair
                   context: context,
                   builder: (BuildContext context) {
                     return AlertDialog(
@@ -170,17 +184,17 @@ class _HomePageState extends State<HomePage> {
                       actions: <Widget>[
                         TextButton(
                           onPressed: () {
-                            Navigator.of(context).pop(); // Fecha o dialog
+                            Navigator.of(context).pop(); // Fecha o diálogo
                           },
                           child: Text("Cancelar"),
                         ),
                         TextButton(
                           onPressed: () {
-                            authService.signOut();
+                            authService.signOut(); // Faz logout
                             Navigator.pop(context); // Fecha o menu
                             Navigator.pop(context); // Fecha a tela atual
-                            _notificationsPlugin.cancelAll();
-                            SettingsPage.cancelNotifications(context);
+                            _notificationsPlugin.cancelAll(); // Cancela notificações
+                            SettingsPage.cancelNotifications(context); // Remove notificações agendadas
                           },
                           child: Text("Confirmar"),
                         ),
@@ -190,7 +204,6 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-
           ],
         ),
       ),

@@ -5,19 +5,19 @@ class ReminderService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Cria o documento `reminders` para o usuário se não existir
+  /// Garante que cada usuário tenha um espaço inicial para lembretes no Firestore.
   Future<void> initializeRemindersCollection() async {
     final user = _auth.currentUser;
     if (user == null) {
-      throw Exception("Usuário não autenticado!");
+      throw Exception("Usuário não autenticado!"); // Evita execução sem autenticação.
     }
 
     final remindersCollection = _firestore.collection('users').doc(user.uid).collection('reminders');
 
-    // Verifica se a coleção `reminders` está vazia
+    // Caso o usuário seja novo, fornece um ponto de partida para lembretes.
     final snapshot = await remindersCollection.limit(1).get();
     if (snapshot.docs.isEmpty) {
-      // Adiciona um documento inicial (opcional)
+      // Cria um lembrete de exemplo para orientar o uso inicial.
       await remindersCollection.doc('template').set({
         'name': 'Exemplo de lembrete',
         'time': '08:00 AM',
@@ -28,7 +28,7 @@ class ReminderService {
     }
   }
 
-  /// Adiciona um novo lembrete no Firestore
+  /// Facilita a adição de lembretes no Firestore com dados essenciais para personalização.
   Future<void> addReminder({
     required String name,
     required String time,
@@ -37,21 +37,21 @@ class ReminderService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      throw Exception("Usuário não autenticado!");
+      throw Exception("Usuário não autenticado!"); // Garante que apenas usuários válidos possam adicionar lembretes.
     }
 
     final reminder = {
-      'name': name,
-      'time': time,
-      'repeatDaily': repeatDaily,
-      'vibration': vibration,
-      'createdAt': Timestamp.now(),
+      'name': name, // Identifica o propósito do lembrete.
+      'time': time, // Define quando ele deve ser acionado.
+      'repeatDaily': repeatDaily, // Oferece suporte a repetições diárias.
+      'vibration': vibration, // Inclui personalização com ou sem vibração.
+      'createdAt': Timestamp.now(), // Armazena o momento de criação para ordenação ou histórico.
     };
 
     await _firestore.collection('users').doc(user.uid).collection('reminders').add(reminder);
   }
 
-  /// Apaga um lembrete específico do Firestore
+  /// Permite que o usuário remova um lembrete específico, fornecendo controle total sobre suas notificações.
   Future<void> deleteReminder(String reminderId) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -61,7 +61,7 @@ class ReminderService {
     await _firestore.collection('users').doc(user.uid).collection('reminders').doc(reminderId).delete();
   }
 
-  /// Recupera os lembretes do Firestore (stream)
+  /// Oferece um fluxo contínuo de lembretes atualizados, ideal para sincronização em tempo real.
   Stream<QuerySnapshot> getRemindersStream() {
     final user = _auth.currentUser;
     if (user == null) {

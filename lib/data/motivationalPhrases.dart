@@ -1,5 +1,3 @@
-import 'dart:math';
-
 class MotivationalPhrases {
   final String phrase;
 
